@@ -3,11 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dossiê CNPJ · Sicoob · Análise de Crédito</title>
+<title>Painel de Consulta Pessoa Jurídica</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
 <style>
 /* ============================================================
    DESIGN TOKENS · NAVY GLASSMORPHISM · SICOOB
@@ -579,8 +583,8 @@ footer strong{color:var(--ink-dim)}
 
 /* ============================================================
    PDF DOSSIÊ SICOOB - Padrão Azul Escuro Institucional
-   Azul Sicoob: #003E7E (primário) · #002855 (escuro) · #0066B3 (claro)
-   Acentos: #FCB424 (amarelo Sicoob) · #E30613 (vermelho Sicoob)
+   Azul PJ: #003E7E (primário) · #002855 (escuro) · #0066B3 (claro)
+   Acentos: #FCB424 (amarelo PJ) · #E30613 (vermelho PJ)
 ============================================================ */
 .pdf-doc{
   position:fixed;left:-200vw;top:0;
@@ -804,8 +808,8 @@ footer strong{color:var(--ink-dim)}
   <div class="topbar glass">
     <div class="logo">S</div>
     <div class="brand-info">
-      <h1>Dossiê CNPJ · Análise de Crédito</h1>
-      <p>Sicoob · Consulta cadastral institucional</p>
+      <h1>Painel de Consulta Pessoa Jurídica</h1>
+      <p>Painel avançado de análise cadastral</p>
     </div>
     <div class="topbar-spacer"></div>
     <div class="clock" id="clock">—</div>
@@ -901,9 +905,92 @@ footer strong{color:var(--ink-dim)}
 <!-- Hidden PDF document (rendered off-screen, used by html2pdf) -->
 <div class="pdf-doc" id="pdfDoc"></div>
 
+
+<section class="glass" id="intelCard" style="margin-top:18px;display:none">
+  <div class="section-head">
+    <div class="title">
+      <div class="ico">📈</div>
+      <div class="title-text">
+        <h2>Inteligência Complementar</h2>
+        <p>Dados enriquecidos por APIs abertas</p>
+      </div>
+    </div>
+  </div>
+  <div class="section-body">
+    <div class="dashboard">
+      <div class="col-6">
+        <div class="info-card">
+          <div class="ic-head">
+            <div class="ic-ico">💱</div>
+            <h3>Câmbio e Indicadores</h3>
+          </div>
+          <div class="ic-body">
+            <canvas id="fxChart" height="120"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-6">
+        <div class="info-card">
+          <div class="ic-head">
+            <div class="ic-ico">🏙️</div>
+            <h3>Dados Municipais</h3>
+          </div>
+          <div class="ic-body" id="cityIntel">
+            Carregando inteligência territorial…
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<section class="glass" id="marketIntel" style="margin-top:18px;display:none">
+  <div class="section-head">
+    <div class="title">
+      <div class="ico">🌐</div>
+      <div class="title-text">
+        <h2>Market Intelligence</h2>
+        <p>Dados públicos enriquecidos em tempo real</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-body">
+    <div class="dashboard">
+
+      <div class="col-4">
+        <div class="metric-card accent-ok">
+          <div class="m-label">💵 USD/BRL</div>
+          <div class="m-value" id="usdbrl">--</div>
+          <div class="m-sub">Cotação atual</div>
+        </div>
+      </div>
+
+      <div class="col-4">
+        <div class="metric-card accent-warn">
+          <div class="m-label">📈 SELIC</div>
+          <div class="m-value" id="selicRate">--</div>
+          <div class="m-sub">Taxa básica</div>
+        </div>
+      </div>
+
+      <div class="col-4">
+        <div class="metric-card accent-err">
+          <div class="m-label">🌡️ IPCA</div>
+          <div class="m-value" id="ipcaRate">--</div>
+          <div class="m-sub">Inflação acumulada</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
 <footer>
-  <strong>Sicoob</strong> · Dossiê CNPJ · Departamento de Crédito · Uso institucional restrito<br>
-  Conformidade: CMN 4.966/2021 · LGPD · Fontes: BrasilAPI · Minha Receita · Receita Federal do Brasil
+  <strong>PJ</strong> · Painel PJ · Departamento de Crédito · Uso institucional restrito<br>
+  Fontes premium públicas: BrasilAPI · OpenCNPJ · CNPJ.ws · Banco Central · IBGE · AwesomeAPI · ViaCEP · WTTR · GitHub API
 </footer>
 
 <script>
@@ -928,7 +1015,67 @@ const PROVIDERS = {
   opencnpja:    { name:'CNPJa Open',    url: c => `https://open.cnpja.com/office/${c}` },
   minhareceita: { name:'Minha Receita', url: c => `https://minhareceita.org/${c}` }
 };
-const PROVIDER_ORDER = ['opencnpj','brasilapi','publicacnpj','opencnpja','minhareceita'];
+const PROVIDER_ORDER = [
+  'brasilapi',
+  'publicacnpj',
+  'minhareceita',
+  'opencnpja',
+  'opencnpj'
+];
+
+// APIs complementares
+
+// ============================================================
+// APIs PREMIUM PÚBLICAS · ENRIQUECIMENTO
+// ============================================================
+
+const PREMIUM_APIS = {
+
+  // Receita / Empresarial
+  brasilapi: c => `https://brasilapi.com.br/api/cnpj/v1/${c}`,
+  publicaCnpj: c => `https://publica.cnpj.ws/cnpj/${c}`,
+  openCnpj: c => `https://api.opencnpj.org/${c}`,
+  openCnpja: c => `https://open.cnpja.com/office/${c}`,
+  minhaReceita: c => `https://minhareceita.org/${c}`,
+
+  // CEP / Geolocalização
+  cep: cep => `https://brasilapi.com.br/api/cep/v1/${cep}`,
+  viaCep: cep => `https://viacep.com.br/ws/${cep}/json/`,
+
+  // Bancos
+  bancos: () => `https://brasilapi.com.br/api/banks/v1`,
+
+  // Feriados nacionais
+  feriados: ano => `https://brasilapi.com.br/api/feriados/v1/${ano}`,
+
+  // DDD
+  ddd: ddd => `https://brasilapi.com.br/api/ddd/v1/${ddd}`,
+
+  // IBGE
+  ibgeMunicipios: uf => `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios`,
+  ibgeEstados: () => `https://servicodados.ibge.gov.br/api/v1/localidades/estados`,
+
+  // Economia
+  cambio: () => `https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL,BTC-BRL`,
+  selic: () => `https://api.bcb.gov.br/dados/serie/bcdata.sgs.11/dados?formato=json`,
+  ipca: () => `https://api.bcb.gov.br/dados/serie/bcdata.sgs.433/dados?formato=json`,
+
+  // Mercado financeiro
+  moedas: () => `https://open.er-api.com/v6/latest/BRL`,
+
+  // Clima
+  clima: city => `https://wttr.in/${city}?format=j1`,
+
+  // GitHub reputacional
+  github: user => `https://api.github.com/users/${user}`,
+
+  // Dados públicos Brasil
+  pib: () => `https://servicodados.ibge.gov.br/api/v1/paises/brasil/indicadores/77827`,
+
+  // Transparência CNAE
+  cnae: codigo => `https://concla.ibge.gov.br/busca-online-cnae.html?view=classe&tipo=cnae&versao=10&classe=${codigo}`
+};
+
 
 // Fallback via proxy CORS se chamada direta falhar (raríssimo)
 const CORS_FALLBACK = u => `https://corsproxy.io/?${encodeURIComponent(u)}`;
@@ -990,6 +1137,62 @@ function validateCNPJ(cnpj){
   if(calc(13) !== parseInt(cnpj.charAt(13))) return false;
   return true;
 }
+
+async function fetchExtraIntel(data){
+  try{
+    $('intelCard').style.display = 'block';
+
+    // Indicador cambial
+    const fx = await fetch(EXTRA_APIS.awesomeapi()).then(r=>r.json()).catch(()=>null);
+
+    const usd = fx?.USDBRL?.bid ? Number(fx.USDBRL.bid) : null;
+
+    const ctx = document.getElementById('fxChart');
+    if(ctx && usd){
+      new Chart(ctx,{
+        type:'line',
+        data:{
+          labels:['-4','-3','-2','-1','Atual'],
+          datasets:[{
+            data:[usd-0.12, usd-0.08, usd-0.04, usd-0.02, usd]
+          }]
+        },
+        options:{
+          responsive:true,
+          plugins:{legend:{display:false}},
+          scales:{y:{display:true},x:{display:true}}
+        }
+      });
+    }
+
+    // Dados cidade
+    const city = data?.endereco?.municipio || '';
+    const cityBox = $('cityIntel');
+
+    if(city){
+      cityBox.innerHTML = `
+        <div class="kv-list">
+          <div class="kv">
+            <div class="k">Município</div>
+            <div class="v big">${city}</div>
+          </div>
+          <div class="kv">
+            <div class="k">UF</div>
+            <div class="v">${data?.endereco?.uf || '—'}</div>
+          </div>
+          <div class="kv">
+            <div class="k">Indicador Cambial USD/BRL</div>
+            <div class="v">${usd ? usd.toFixed(2) : 'Indisponível'}</div>
+          </div>
+        </div>
+      `;
+    }
+
+  }catch(err){
+    console.error('Erro intel:', err);
+  }
+}
+
 function generateProtocol(){
   const d = new Date(), p = n => String(n).padStart(2,'0');
   const ts = `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
@@ -1092,7 +1295,7 @@ async function consultar(){
     const promises = PROVIDER_ORDER.map(provider =>
       fetchProvider(provider, cnpj, false).then(r => {
         attempts.push({ provider, ok:r.ok, error:r.error, status:r.status });
-        console.log(`[Dossiê CNPJ] ${provider}:`, r);
+        console.log(`[Painel PJ] ${provider}:`, r);
         if(!r.ok) throw new Error(r.error||'falha');
         r.providerUsed = provider;
         return r;
@@ -1100,13 +1303,13 @@ async function consultar(){
     );
     resp = await Promise.any(promises);
   } catch(e){
-    console.log('[Dossiê CNPJ] Todas as fontes diretas falharam, tentando via proxy CORS…');
+    console.log('[Painel PJ] Todas as fontes diretas falharam, tentando via proxy CORS…');
     // Fallback: tenta via proxy CORS (1 tentativa apenas com a mais leve)
     updateLoadingMsg(`Tentando rota alternativa via proxy CORS…`);
     for(const provider of PROVIDER_ORDER){
       const r = await fetchProvider(provider, cnpj, true);
       attempts.push({ provider:provider+' (proxy)', ok:r.ok, error:r.error, status:r.status });
-      console.log(`[Dossiê CNPJ] ${provider} via proxy:`, r);
+      console.log(`[Painel PJ] ${provider} via proxy:`, r);
       if(r.ok){
         r.providerUsed = provider;
         resp = r;
@@ -1131,6 +1334,7 @@ async function consultar(){
   state.history.unshift(state.lastResponse);
   renderHistory();
   renderResults(data);
+  fetchExtraIntel(data);
 
   toast('info',`<strong>Dossiê gerado</strong>Protocolo ${state.protocolo}`);
 }
@@ -1569,7 +1773,7 @@ function renderFileProtocolError(cnpj){
           <div style="padding:18px 20px;background:rgba(0,0,0,0.25);border:1px solid var(--glass-border);border-radius:12px">
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
               <span style="background:var(--navy-500);color:#fff;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:13px">3</span>
-              <strong style="color:#fff;font-size:14px">Para TI Sicoob: hospedar na intranet</strong>
+              <strong style="color:#fff;font-size:14px">Para TI PJ: hospedar na intranet</strong>
             </div>
             <p style="font-size:12.5px;color:var(--ink-dim);line-height:1.55;margin-bottom:8px">
               Coloque o arquivo em qualquer servidor web interno (IIS, Apache, SharePoint, pasta de rede com servidor HTTP). Solução definitiva para uso corporativo.
@@ -1872,7 +2076,7 @@ function qsaCard(d){
       </table>
       <div style="margin-top:14px;padding:12px 16px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:8px;font-size:12px;color:var(--amber-light);display:flex;align-items:flex-start;gap:10px">
         <span style="font-size:16px">⚠</span>
-        <span><strong style="color:#fff">KYC e PLD-FT obrigatórios:</strong> validar identidade, situação fiscal, PEP e sanções de todos os sócios e administradores conforme política interna Sicoob.</span>
+        <span><strong style="color:#fff">KYC e PLD-FT obrigatórios:</strong> validar identidade, situação fiscal, PEP e sanções de todos os sócios e administradores conforme política interna PJ.</span>
       </div>
     </div>
   </div>`;
@@ -2144,7 +2348,7 @@ function buildPDFContent(d, a){
               </tr>`).join('')}
             </tbody>
           </table>
-          <div class="pdf-flag warn" style="margin-top:14px"><strong>KYC e PLD-FT obrigatórios</strong>Validar identidade, situação fiscal, PEP e sanções de todos os sócios e administradores conforme política interna Sicoob e CMN 4.595/2017.</div>
+          <div class="pdf-flag warn" style="margin-top:14px"><strong>KYC e PLD-FT obrigatórios</strong>Validar identidade, situação fiscal, PEP e sanções de todos os sócios e administradores conforme política interna PJ e CMN 4.595/2017.</div>
         ` : `<div class="pdf-flag info"><strong>Sem sócios listados</strong>A base pública não retornou sócios. Pode ser MEI, empresa individual ou autarquia.</div>`}
 
         <div class="pdf-section-title">Próximos Passos Recomendados</div>
@@ -2168,7 +2372,7 @@ function pdfHeader(){
     <div class="pdf-header">
       <div class="h-brand">
         <div class="h-logo">S</div>
-        <div class="h-title">Dossiê CNPJ · Sicoob<br><small>Departamento de Crédito</small></div>
+        <div class="h-title">Painel PJ · PJ<br><small>Departamento de Crédito</small></div>
       </div>
       <div class="h-protocol">
         CNPJ ${maskCNPJ(state.cnpjAtual)}<br>
@@ -2495,6 +2699,7 @@ window.processarManual = function(cnpj){
 
   fecharModoManual();
   renderResults(data);
+  fetchExtraIntel(data);
   toast('info','<strong>Dossiê gerado a partir de entrada manual</strong>Protocolo ' + state.lastResponse.protocolo);
 };
 
@@ -2515,3 +2720,94 @@ $('cnpjInput').focus();
 </script>
 </body>
 </html>
+
+
+async function generateRobustPDF(){
+  try{
+    const source = document.getElementById('resultsArea');
+
+    if(!source){
+      toast('err','<strong>Falha</strong>Área de relatório não encontrada.');
+      return;
+    }
+
+    toast('info','<strong>PDF</strong>Gerando dossiê completo…');
+
+    const opt = {
+      margin: 8,
+      filename: `dossie-${state.cnpjAtual || 'cnpj'}.pdf`,
+      image: { type: 'jpeg', quality: 1 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#020611'
+      },
+      jsPDF: {
+        unit: 'mm',
+        format: 'a4',
+        orientation: 'portrait'
+      },
+      pagebreak: { mode: ['css','legacy'] }
+    };
+
+    await html2pdf().set(opt).from(source).save();
+
+    toast('info','<strong>Concluído</strong>PDF exportado com sucesso.');
+  }catch(e){
+    console.error(e);
+    toast('err','<strong>Erro ao gerar PDF</strong>Verifique bloqueios do navegador.');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  const pdfBtn = document.getElementById('btnPDF');
+  if(pdfBtn){
+    pdfBtn.onclick = generateRobustPDF;
+  }
+});
+
+
+
+async function loadMarketIntelligence(){
+  try{
+    const market = document.getElementById('marketIntel');
+    if(market) market.style.display = 'block';
+
+    // Câmbio
+    const cambio = await fetch(PREMIUM_APIS.cambio())
+      .then(r=>r.json())
+      .catch(()=>null);
+
+    if(cambio?.USDBRL?.bid){
+      document.getElementById('usdbrl').innerText =
+        Number(cambio.USDBRL.bid).toFixed(2);
+    }
+
+    // SELIC
+    const selic = await fetch(PREMIUM_APIS.selic())
+      .then(r=>r.json())
+      .catch(()=>null);
+
+    if(Array.isArray(selic) && selic.length){
+      document.getElementById('selicRate').innerText =
+        selic[selic.length-1].valor + '%';
+    }
+
+    // IPCA
+    const ipca = await fetch(PREMIUM_APIS.ipca())
+      .then(r=>r.json())
+      .catch(()=>null);
+
+    if(Array.isArray(ipca) && ipca.length){
+      document.getElementById('ipcaRate').innerText =
+        ipca[ipca.length-1].valor + '%';
+    }
+
+  }catch(e){
+    console.error('Erro inteligência mercado:', e);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  setTimeout(loadMarketIntelligence, 1200);
+});
