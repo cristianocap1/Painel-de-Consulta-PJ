@@ -1,0 +1,1488 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#003E7E">
+<title>Dossiê CNPJ · Consulta Empresarial</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html, body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: linear-gradient(160deg, #001E3C 0%, #002855 50%, #003E7E 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+  color: #fff;
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+.container { max-width: 760px; margin: 0 auto; padding: 16px; padding-bottom: 80px; }
+
+/* Header */
+.header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 4px 24px;
+}
+.logo {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: linear-gradient(135deg, #FCB424, #F59E0B);
+  display: grid; place-items: center;
+  font-weight: 800; font-size: 22px; color: #002855;
+  box-shadow: 0 6px 18px rgba(252, 180, 36, 0.35);
+}
+.header h1 { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+.header p { font-size: 12px; color: rgba(255,255,255,0.65); margin-top: 2px; }
+
+/* Card base */
+.card {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 18px;
+  padding: 20px;
+  margin-bottom: 14px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+.card-title {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13px; font-weight: 700;
+  color: #FCB424;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  margin-bottom: 14px;
+}
+.card-title .ico { font-size: 16px; }
+
+/* Input */
+.input-row { display: flex; gap: 8px; }
+input[type="text"] {
+  flex: 1;
+  background: rgba(0,0,0,0.3);
+  border: 1.5px solid rgba(255,255,255,0.15);
+  border-radius: 12px;
+  padding: 14px 16px;
+  color: #fff;
+  font-size: 16px; /* Importante: 16px previne zoom no iOS */
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  letter-spacing: 0.5px;
+  outline: none;
+  transition: all 0.2s;
+}
+input[type="text"]:focus {
+  border-color: #FCB424;
+  background: rgba(0,0,0,0.5);
+}
+input::placeholder { color: rgba(255,255,255,0.35); }
+
+button {
+  background: linear-gradient(135deg, #FCB424, #F59E0B);
+  color: #002855;
+  border: none;
+  border-radius: 12px;
+  padding: 14px 20px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  -webkit-appearance: none;
+  white-space: nowrap;
+}
+button:active { transform: scale(0.97); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+button.secondary {
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+/* Status messages */
+.status {
+  padding: 14px 16px; border-radius: 12px;
+  font-size: 14px; line-height: 1.5;
+  margin-top: 12px;
+  display: none;
+}
+.status.show { display: block; }
+.status.loading { background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.4); }
+.status.success { background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); }
+.status.error { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); }
+.spinner {
+  display: inline-block; width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,0.2);
+  border-top-color: #fff; border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  vertical-align: middle; margin-right: 8px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Hero */
+.hero { display: none; }
+.hero.show { display: block; }
+.hero-label {
+  font-size: 11px; font-weight: 700;
+  color: #FCB424;
+  text-transform: uppercase; letter-spacing: 0.12em;
+  margin-bottom: 6px;
+}
+.hero-cnpj {
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 17px; font-weight: 600;
+  color: #FCB424;
+  margin-bottom: 12px;
+  letter-spacing: 0.5px;
+}
+.hero-name {
+  font-size: 22px; font-weight: 800;
+  line-height: 1.15;
+  margin-bottom: 4px;
+  letter-spacing: -0.02em;
+}
+.hero-fantasia {
+  font-size: 14px;
+  color: rgba(255,255,255,0.65);
+  margin-bottom: 16px;
+}
+
+/* Risk badge */
+.risk-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 14px; border-radius: 999px;
+  font-size: 13px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.04em;
+  border: 1.5px solid;
+}
+.risk-badge.low { background: rgba(16, 185, 129, 0.15); border-color: #10B981; color: #6EE7B7; }
+.risk-badge.mid { background: rgba(252, 180, 36, 0.15); border-color: #FCB424; color: #FCD34D; }
+.risk-badge.high { background: rgba(239, 68, 68, 0.15); border-color: #EF4444; color: #FCA5A5; }
+
+/* Info grid */
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.info-grid.full { grid-template-columns: 1fr; }
+.info-item {
+  background: rgba(0,0,0,0.2);
+  border-left: 3px solid #FCB424;
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+.info-item.alt { border-left-color: #10B981; }
+.info-item.crit { border-left-color: #EF4444; background: rgba(239, 68, 68, 0.08); }
+.info-label {
+  font-size: 10px; font-weight: 700;
+  color: rgba(255,255,255,0.55);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  margin-bottom: 4px;
+}
+.info-value {
+  font-size: 14px;
+  color: #fff;
+  font-weight: 500;
+  word-break: break-word;
+}
+.info-value.mono {
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 13px;
+}
+.info-value.empty { color: rgba(255,255,255,0.35); font-style: italic; font-weight: 400; }
+.info-value.big {
+  font-size: 18px;
+  font-weight: 700;
+  color: #FCB424;
+}
+
+/* Sócios */
+.socio-item {
+  background: rgba(0,0,0,0.2);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+}
+.socio-nome { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+.socio-meta { font-size: 12px; color: rgba(255,255,255,0.6); display: flex; gap: 12px; flex-wrap: wrap; }
+.socio-meta span { display: inline-flex; align-items: center; gap: 4px; }
+
+/* Hub de pesquisas */
+.hub-grid {
+  display: grid; gap: 10px;
+}
+.hub-group {
+  background: rgba(0,0,0,0.2);
+  border-radius: 12px;
+  padding: 14px;
+}
+.hub-group-title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; font-weight: 700;
+  color: #FCB424;
+  margin-bottom: 10px;
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.hub-links {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.hub-link {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  color: #fff;
+  text-decoration: none;
+  font-size: 13px;
+  transition: all 0.15s;
+}
+.hub-link:active { background: rgba(255,255,255,0.1); }
+.hub-link-arrow { color: #FCB424; font-size: 14px; }
+
+/* Action buttons */
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 4px;
+}
+.actions button { padding: 12px; font-size: 14px; }
+
+/* Empty state */
+.empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: rgba(255,255,255,0.5);
+  font-size: 14px;
+}
+.empty .big-emoji { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+
+/* Sources used */
+.sources-bar {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  margin-top: 10px;
+  font-size: 11px;
+}
+.source-pill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #6EE7B7;
+  font-weight: 600;
+}
+.source-pill.fail {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #FCA5A5;
+}
+
+/* Tablet+ */
+@media (min-width: 700px) {
+  .info-grid { grid-template-columns: 1fr 1fr 1fr; }
+  .hub-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="logo">D</div>
+    <div>
+      <h1>Dossiê CNPJ</h1>
+      <p>Consulta empresarial completa</p>
+    </div>
+  </div>
+
+  <!-- Consulta -->
+  <div class="card">
+    <div class="card-title"><span class="ico">🔍</span> Nova consulta</div>
+    <div class="input-row">
+      <input type="text" id="cnpjInput" placeholder="00.000.000/0001-00" inputmode="numeric" autocomplete="off" maxlength="18">
+      <button id="btnConsultar" onclick="consultar()">Consultar</button>
+    </div>
+    <div class="status" id="status"></div>
+  </div>
+
+  <!-- Resultados -->
+  <div id="results"></div>
+
+  <!-- Empty state -->
+  <div class="empty" id="empty">
+    <div class="big-emoji">📋</div>
+    Digite um CNPJ acima para consultar dados públicos da empresa.
+  </div>
+
+</div>
+
+<script>
+'use strict';
+
+/* ============================================================
+   FONTES PÚBLICAS - todas com CORS aberto
+   Ordem: fontes mais completas primeiro (QSA + CNAEs descritos)
+============================================================ */
+const PROVIDERS = [
+  { id:'publicacnpj',  name:'CNPJ.ws',     url: c => `https://publica.cnpj.ws/cnpj/${c}` },
+  { id:'brasilapi',    name:'BrasilAPI',   url: c => `https://brasilapi.com.br/api/cnpj/v1/${c}` },
+  { id:'minhareceita', name:'MinhaReceita',url: c => `https://minhareceita.org/${c}` },
+  { id:'opencnpj',     name:'OpenCNPJ',    url: c => `https://api.opencnpj.org/${c}` }
+];
+
+/* ============================================================
+   UTILITIES
+============================================================ */
+const $ = id => document.getElementById(id);
+
+function maskCNPJ(v){
+  v = String(v||'').replace(/\D/g,'').slice(0,14);
+  if(v.length >= 13) return v.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})/,'$1.$2.$3/$4-$5');
+  if(v.length >= 9)  return v.replace(/(\d{2})(\d{3})(\d{3})(\d{0,4})/,'$1.$2.$3/$4');
+  if(v.length >= 6)  return v.replace(/(\d{2})(\d{3})(\d{0,3})/,'$1.$2.$3');
+  if(v.length >= 3)  return v.replace(/(\d{2})(\d{0,3})/,'$1.$2');
+  return v;
+}
+
+function validateCNPJ(v){
+  v = String(v||'').replace(/\D/g,'');
+  if(v.length !== 14) return false;
+  if(/^(\d)\1+$/.test(v)) return false;
+  let sum = 0, weight = 5;
+  for(let i=0; i<12; i++){ sum += parseInt(v[i]) * weight; weight = weight===2 ? 9 : weight-1; }
+  let d1 = sum % 11; d1 = d1 < 2 ? 0 : 11 - d1;
+  if(d1 !== parseInt(v[12])) return false;
+  sum = 0; weight = 6;
+  for(let i=0; i<13; i++){ sum += parseInt(v[i]) * weight; weight = weight===2 ? 9 : weight-1; }
+  let d2 = sum % 11; d2 = d2 < 2 ? 0 : 11 - d2;
+  return d2 === parseInt(v[13]);
+}
+
+function fmtDate(s){
+  if(!s) return null;
+  // ISO: 2024-01-15
+  let m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return `${m[3]}/${m[2]}/${m[1]}`;
+  // BR: 15/01/2024
+  m = String(s).match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if(m) return m[0];
+  return String(s);
+}
+
+function fmtDateTime(d){
+  d = d || new Date();
+  const p = n => String(n).padStart(2,'0');
+  return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function fmtMoney(v){
+  if(v === null || v === undefined || v === '') return null;
+  let n = typeof v === 'number' ? v : parseFloat(String(v).replace(/\./g,'').replace(',','.'));
+  if(isNaN(n)) n = typeof v === 'number' ? v : parseFloat(String(v));
+  if(isNaN(n)) return null;
+  return n.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+}
+
+function anosDesde(isoDate){
+  if(!isoDate) return null;
+  const m = String(isoDate).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(!m) return null;
+  const d = new Date(parseInt(m[1]), parseInt(m[2])-1, parseInt(m[3]));
+  if(isNaN(d)) return null;
+  return Math.floor((Date.now() - d.getTime()) / (365.25 * 24 * 3600 * 1000) * 10) / 10;
+}
+
+function esc(s){
+  return String(s||'').replace(/[&<>"']/g, c => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+  }[c]));
+}
+
+function showStatus(type, msg){
+  const el = $('status');
+  el.className = 'status show ' + type;
+  el.innerHTML = type === 'loading' ? `<span class="spinner"></span>${msg}` : msg;
+}
+
+function hideStatus(){
+  $('status').className = 'status';
+}
+
+/* ============================================================
+   NORMALIZADORES - cada API tem um formato diferente
+   Saída: objeto unificado
+============================================================ */
+
+function normalize(raw, providerId){
+  if(providerId === 'publicacnpj') return normPublicaCnpj(raw);
+  if(providerId === 'opencnpj')    return normOpenCnpj(raw);
+  if(providerId === 'minhareceita') return normBrasilApi(raw); // Mesmo formato
+  return normBrasilApi(raw); // default BrasilAPI
+}
+
+// BrasilAPI / MinhaReceita (formato achatado RF)
+function normBrasilApi(r){
+  if(!r || typeof r !== 'object') return null;
+  return {
+    cnpj: String(r.cnpj||'').replace(/\D/g,''),
+    razao_social: r.razao_social || null,
+    nome_fantasia: r.nome_fantasia || null,
+    natureza_juridica: r.natureza_juridica || null,
+    porte: r.descricao_porte || r.porte || null,
+    data_inicio_atividade: r.data_inicio_atividade || null,
+    capital_social: r.capital_social ?? null,
+    situacao: r.descricao_situacao_cadastral || null,
+    data_situacao: r.data_situacao_cadastral || null,
+    motivo_situacao: r.descricao_motivo_situacao_cadastral || null,
+    endereco: {
+      logradouro: [r.descricao_tipo_de_logradouro, r.logradouro].filter(Boolean).join(' ') || null,
+      numero: r.numero || null,
+      complemento: r.complemento || null,
+      bairro: r.bairro || null,
+      municipio: r.municipio || null,
+      uf: r.uf || null,
+      cep: r.cep || null
+    },
+    telefones: [r.ddd_telefone_1, r.ddd_telefone_2].filter(Boolean),
+    email: r.email || null,
+    cnae_principal: {
+      codigo: r.cnae_fiscal || null,
+      descricao: r.cnae_fiscal_descricao || null
+    },
+    cnaes_secundarios: (r.cnaes_secundarios||[])
+      .filter(c => c && (c.codigo || c.code))
+      .map(c => ({
+        codigo: c.codigo || c.code,
+        descricao: c.descricao || c.text || null
+      })),
+    socios: (r.qsa||[])
+      .filter(s => s && (s.nome_socio || s.nome))
+      .map(s => ({
+        nome: s.nome_socio || s.nome,
+        cpf_cnpj: s.cnpj_cpf_do_socio || s.cpf_cnpj_socio || '',
+        qualificacao: s.qualificacao_socio || null,
+        data_entrada: s.data_entrada_sociedade || s.data_entrada || null,
+        pais: s.pais || 'Brasil'
+      })),
+    opcao_simples: !!r.opcao_pelo_simples,
+    opcao_mei: !!r.opcao_pelo_mei,
+    matriz_filial: r.descricao_identificador_matriz_filial || (r.identificador_matriz_filial === 1 ? 'MATRIZ' : null)
+  };
+}
+
+// CNPJ.ws (formato aninhado com .estabelecimento)
+function normPublicaCnpj(r){
+  if(!r || typeof r !== 'object') return null;
+  const e = r.estabelecimento || {};
+  const cleanMoney = v => {
+    if(v === null || v === undefined) return null;
+    if(typeof v === 'number') return v;
+    const n = parseFloat(String(v).replace(',','.'));
+    return isNaN(n) ? null : n;
+  };
+  return {
+    cnpj: String(e.cnpj || r.cnpj || '').replace(/\D/g,''),
+    razao_social: r.razao_social || null,
+    nome_fantasia: e.nome_fantasia || null,
+    natureza_juridica: r.natureza_juridica?.descricao || null,
+    porte: r.porte?.descricao || null,
+    data_inicio_atividade: e.data_inicio_atividade || null,
+    capital_social: cleanMoney(r.capital_social),
+    situacao: e.situacao_cadastral || null,
+    data_situacao: e.data_situacao_cadastral || null,
+    motivo_situacao: e.motivo_situacao_cadastral || null,
+    endereco: {
+      logradouro: [e.tipo_logradouro, e.logradouro].filter(Boolean).join(' ') || null,
+      numero: e.numero || null,
+      complemento: e.complemento || null,
+      bairro: e.bairro || null,
+      municipio: e.cidade?.nome || null,
+      uf: e.estado?.sigla || null,
+      cep: e.cep || null
+    },
+    telefones: [
+      (e.ddd1 && e.telefone1) ? `(${e.ddd1}) ${e.telefone1}` : null,
+      (e.ddd2 && e.telefone2) ? `(${e.ddd2}) ${e.telefone2}` : null
+    ].filter(Boolean),
+    email: e.email || null,
+    cnae_principal: e.atividade_principal ? {
+      codigo: e.atividade_principal.subclasse || e.atividade_principal.id || null,
+      descricao: e.atividade_principal.descricao || null
+    } : { codigo:null, descricao:null },
+    cnaes_secundarios: (e.atividades_secundarias||[])
+      .filter(c => c && (c.subclasse || c.id))
+      .map(c => ({
+        codigo: c.subclasse || c.id,
+        descricao: c.descricao || null
+      })),
+    socios: (r.socios||[])
+      .filter(s => s && s.nome)
+      .map(s => ({
+        nome: s.nome,
+        cpf_cnpj: s.cpf_cnpj_socio || '',
+        qualificacao: s.qualificacao_socio?.descricao || null,
+        data_entrada: s.data_entrada || null,
+        pais: s.pais?.nome || 'Brasil'
+      })),
+    opcao_simples: r.simples?.simples === 'Sim',
+    opcao_mei: r.simples?.mei === 'Sim',
+    matriz_filial: e.tipo || null
+  };
+}
+
+// OpenCNPJ.org (formato simples, sem QSA nem CNAEs com descrição)
+function normOpenCnpj(r){
+  if(!r || typeof r !== 'object') return null;
+  const cleanMoney = v => {
+    if(v === null || v === undefined) return null;
+    if(typeof v === 'number') return v;
+    const n = parseFloat(String(v).replace(',','.'));
+    return isNaN(n) ? null : n;
+  };
+  return {
+    cnpj: String(r.cnpj||'').replace(/\D/g,''),
+    razao_social: r.razao_social || null,
+    nome_fantasia: r.nome_fantasia || null,
+    natureza_juridica: r.natureza_juridica || null,
+    porte: r.porte_empresa || null,
+    data_inicio_atividade: r.data_inicio_atividade || null,
+    capital_social: cleanMoney(r.capital_social),
+    situacao: r.situacao_cadastral || null,
+    data_situacao: r.data_situacao_cadastral || null,
+    motivo_situacao: null,
+    endereco: {
+      logradouro: r.logradouro || null,
+      numero: r.numero || null,
+      complemento: r.complemento || null,
+      bairro: r.bairro || null,
+      municipio: r.municipio || null,
+      uf: r.uf || null,
+      cep: r.cep || null
+    },
+    telefones: r.telefone ? [r.telefone] : [],
+    email: r.email || null,
+    cnae_principal: { codigo: r.cnae_principal || null, descricao: null },
+    cnaes_secundarios: [],
+    socios: [],
+    opcao_simples: false,
+    opcao_mei: false,
+    matriz_filial: r.matriz_filial || null
+  };
+}
+
+/* ============================================================
+   FETCH + MERGE
+   Estratégia: dispara todas em paralelo, mescla as respostas
+   priorizando dados mais completos (QSA, descrição CNAE, etc)
+============================================================ */
+
+async function fetchProvider(p, cnpj){
+  const start = Date.now();
+  try {
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 10000);
+    const res = await fetch(p.url(cnpj), {
+      headers: { 'Accept': 'application/json' },
+      signal: ctrl.signal,
+      mode: 'cors'
+    });
+    clearTimeout(timeout);
+    const ms = Date.now() - start;
+    if(!res.ok){
+      return { provider:p.id, name:p.name, ok:false, ms, error:`HTTP ${res.status}` };
+    }
+    const data = await res.json();
+    if(data.status === 'ERROR' || data.type === 'cnpj_info_error'){
+      return { provider:p.id, name:p.name, ok:false, ms, error: data.message || 'CNPJ não encontrado' };
+    }
+    const normalized = normalize(data, p.id);
+    if(!normalized || !normalized.razao_social){
+      return { provider:p.id, name:p.name, ok:false, ms, error:'Resposta vazia' };
+    }
+    return { provider:p.id, name:p.name, ok:true, ms, raw:data, normalized };
+  } catch(e){
+    return { provider:p.id, name:p.name, ok:false, ms:Date.now()-start,
+             error: e.name==='AbortError' ? 'Timeout' : 'Falha de rede' };
+  }
+}
+
+function mergeData(results){
+  const sucessos = results.filter(r => r.ok);
+  if(sucessos.length === 0) return null;
+
+  // Função de score: prioriza fontes com QSA e descrição de CNAE
+  const score = r => {
+    const d = r.normalized;
+    let s = 0;
+    if((d.socios||[]).length > 0) s += 200;
+    if(d.cnae_principal?.descricao) s += 50;
+    if((d.cnaes_secundarios||[]).filter(c => c.descricao).length > 0) s += 30;
+    if(d.data_inicio_atividade) s += 20;
+    if(d.capital_social) s += 10;
+    return s;
+  };
+
+  // Ordenar por score
+  sucessos.sort((a,b) => score(b) - score(a));
+  const principal = sucessos[0];
+  const outras = sucessos.slice(1);
+
+  // Clone profundo da principal
+  const merged = JSON.parse(JSON.stringify(principal.normalized));
+
+  // Mesclar campos vazios da principal com dados das outras
+  for(const r of outras){
+    const o = r.normalized;
+    if(!merged.nome_fantasia && o.nome_fantasia) merged.nome_fantasia = o.nome_fantasia;
+    if(!merged.natureza_juridica && o.natureza_juridica) merged.natureza_juridica = o.natureza_juridica;
+    if(!merged.porte && o.porte) merged.porte = o.porte;
+    if(!merged.data_inicio_atividade && o.data_inicio_atividade) merged.data_inicio_atividade = o.data_inicio_atividade;
+    if(!merged.capital_social && o.capital_social) merged.capital_social = o.capital_social;
+    if(!merged.situacao && o.situacao) merged.situacao = o.situacao;
+    if(!merged.data_situacao && o.data_situacao) merged.data_situacao = o.data_situacao;
+    if(!merged.email && o.email) merged.email = o.email;
+    if((!merged.telefones || merged.telefones.length === 0) && o.telefones?.length) merged.telefones = o.telefones;
+    if(!merged.matriz_filial && o.matriz_filial) merged.matriz_filial = o.matriz_filial;
+
+    // CNAE principal: completar descrição se faltar
+    if(!merged.cnae_principal?.descricao && o.cnae_principal?.descricao){
+      merged.cnae_principal = merged.cnae_principal || {};
+      merged.cnae_principal.descricao = o.cnae_principal.descricao;
+      if(!merged.cnae_principal.codigo) merged.cnae_principal.codigo = o.cnae_principal.codigo;
+    }
+
+    // CNAEs secundários: usar a versão mais completa (com descrições)
+    const atualComDesc = (merged.cnaes_secundarios||[]).filter(c => c.descricao).length;
+    const outraComDesc = (o.cnaes_secundarios||[]).filter(c => c.descricao).length;
+    if(outraComDesc > atualComDesc){
+      merged.cnaes_secundarios = o.cnaes_secundarios;
+    }
+
+    // Sócios: usar a versão com mais sócios válidos
+    const atualSocios = (merged.socios||[]).filter(s => s.nome && s.nome.trim().length > 2).length;
+    const outraSocios = (o.socios||[]).filter(s => s.nome && s.nome.trim().length > 2).length;
+    if(outraSocios > atualSocios){
+      merged.socios = o.socios;
+    }
+
+    // Endereço: preencher complemento se vazio
+    if(!merged.endereco?.complemento && o.endereco?.complemento){
+      merged.endereco = merged.endereco || {};
+      merged.endereco.complemento = o.endereco.complemento;
+    }
+  }
+
+  return {
+    data: merged,
+    sources: results.map(r => ({ name:r.name, ok:r.ok, ms:r.ms, error:r.error })),
+    principal_provider: principal.name
+  };
+}
+
+/* ============================================================
+   ANÁLISE DE RISCO
+============================================================ */
+
+function analisarRisco(d){
+  const flags = [];
+  let nivel = 'BAIXO', cor = 'low';
+
+  const sit = (d.situacao || '').toUpperCase();
+  if(sit && sit !== 'ATIVA'){
+    flags.push({ titulo:'Situação cadastral irregular', desc:`Empresa está ${sit}` });
+    nivel = 'ALTO'; cor = 'high';
+  }
+
+  const anos = anosDesde(d.data_inicio_atividade);
+  if(anos !== null && anos < 2){
+    flags.push({ titulo:'Empresa recente', desc:`Aberta há ${anos} anos` });
+    if(cor === 'low'){ nivel = 'MÉDIO'; cor = 'mid'; }
+  }
+
+  const cap = parseFloat(d.capital_social) || 0;
+  if(cap > 0 && cap < 1000){
+    flags.push({ titulo:'Capital social muito baixo', desc:`R$ ${cap.toFixed(2)}` });
+    if(cor === 'low'){ nivel = 'MÉDIO'; cor = 'mid'; }
+  }
+
+  if((d.socios||[]).length === 0 && !d.opcao_mei){
+    flags.push({ titulo:'QSA não retornado', desc:'Nenhuma fonte retornou sócios' });
+  }
+
+  return { nivel, cor, flags, anos, isAtiva: sit === 'ATIVA' };
+}
+
+/* ============================================================
+   RENDER
+============================================================ */
+
+let state = { ultimoDossie: null };
+
+async function consultar(){
+  const raw = $('cnpjInput').value;
+  const cnpj = raw.replace(/\D/g,'');
+
+  if(!validateCNPJ(cnpj)){
+    showStatus('error', '<strong>CNPJ inválido.</strong> Verifique os 14 dígitos.');
+    return;
+  }
+
+  // Detectar file:// (PDF/consultas não funcionam)
+  if(location.protocol === 'file:'){
+    showStatus('error', '<strong>Atenção:</strong> O painel precisa estar hospedado (GitHub Pages, Netlify) para funcionar. Arquivos locais são bloqueados pelo navegador.');
+    return;
+  }
+
+  $('btnConsultar').disabled = true;
+  $('empty').style.display = 'none';
+  $('results').innerHTML = '';
+  showStatus('loading', `Consultando ${PROVIDERS.length} fontes públicas em paralelo…`);
+
+  // Disparar todas em paralelo
+  const results = await Promise.all(PROVIDERS.map(p => fetchProvider(p, cnpj)));
+
+  console.log('[Dossiê CNPJ] Resultados das fontes:', results.map(r => ({
+    fonte: r.name, ok: r.ok, ms: r.ms, error: r.error,
+    socios: r.ok ? (r.normalized.socios||[]).length : 0,
+    cnaeDesc: r.ok ? !!r.normalized.cnae_principal?.descricao : false
+  })));
+
+  const merged = mergeData(results);
+
+  $('btnConsultar').disabled = false;
+
+  if(!merged){
+    const errs = results.map(r => `<strong>${r.name}:</strong> ${r.error}`).join('<br>');
+    showStatus('error', `<strong>Não foi possível consultar este CNPJ.</strong><br><br>${errs}`);
+    return;
+  }
+
+  state.ultimoDossie = merged;
+  hideStatus();
+  renderDossie(merged);
+}
+
+function renderDossie(merged){
+  const d = merged.data;
+  const a = analisarRisco(d);
+
+  const cnaeP = d.cnae_principal?.codigo
+    ? `${d.cnae_principal.codigo}${d.cnae_principal.descricao ? ' — ' + d.cnae_principal.descricao : ''}`
+    : null;
+
+  const endStr = [
+    d.endereco?.logradouro,
+    d.endereco?.numero,
+    d.endereco?.complemento
+  ].filter(Boolean).join(', ');
+
+  const localStr = [
+    d.endereco?.bairro,
+    d.endereco?.municipio && d.endereco?.uf ? `${d.endereco.municipio}/${d.endereco.uf}` : d.endereco?.municipio || d.endereco?.uf
+  ].filter(Boolean).join(' · ');
+
+  let html = '';
+
+  // ===== HERO =====
+  html += `<div class="card hero show">
+    <div class="hero-label">CNPJ Consultado</div>
+    <div class="hero-cnpj">${maskCNPJ(d.cnpj)}</div>
+    <div class="hero-name">${esc(d.razao_social || '—')}</div>
+    ${d.nome_fantasia ? `<div class="hero-fantasia">${esc(d.nome_fantasia)}</div>` : ''}
+    <div style="margin-top:8px"><span class="risk-badge ${a.cor}">⚠ Risco ${a.nivel}</span></div>
+    <div class="sources-bar">
+      ${merged.sources.map(s => `<span class="source-pill ${s.ok?'':'fail'}">${esc(s.name)} ${s.ok ? '✓' : '✗'}</span>`).join('')}
+    </div>
+  </div>`;
+
+  // ===== DADOS PRINCIPAIS =====
+  html += `<div class="card">
+    <div class="card-title"><span class="ico">📊</span> Dados principais</div>
+    <div class="info-grid">
+      <div class="info-item ${a.isAtiva ? 'alt' : 'crit'}">
+        <div class="info-label">Situação</div>
+        <div class="info-value">${esc(d.situacao || '—')}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Data situação</div>
+        <div class="info-value">${fmtDate(d.data_situacao) || '—'}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Abertura</div>
+        <div class="info-value">${fmtDate(d.data_inicio_atividade) || '—'}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Tempo ativo</div>
+        <div class="info-value">${a.anos !== null ? a.anos.toFixed(1) + ' anos' : '—'}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Capital social</div>
+        <div class="info-value big">${fmtMoney(d.capital_social) || '—'}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Porte</div>
+        <div class="info-value">${esc(d.porte || '—')}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Natureza jurídica</div>
+        <div class="info-value">${esc(d.natureza_juridica || '—')}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Matriz/Filial</div>
+        <div class="info-value">${esc(d.matriz_filial || '—')}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Simples / MEI</div>
+        <div class="info-value">${d.opcao_simples ? 'Simples' : ''}${d.opcao_simples && d.opcao_mei ? ' · ' : ''}${d.opcao_mei ? 'MEI' : ''}${(!d.opcao_simples && !d.opcao_mei) ? 'Não optante' : ''}</div>
+      </div>
+    </div>
+  </div>`;
+
+  // ===== ATIVIDADE =====
+  html += `<div class="card">
+    <div class="card-title"><span class="ico">🏭</span> Atividade econômica</div>
+    <div class="info-grid full">
+      <div class="info-item">
+        <div class="info-label">CNAE principal</div>
+        <div class="info-value">${cnaeP ? esc(cnaeP) : '<span class="empty">Não informado</span>'}</div>
+      </div>
+    </div>`;
+
+  if((d.cnaes_secundarios||[]).length > 0){
+    html += `<div style="margin-top:14px"><div class="info-label" style="margin-bottom:8px">CNAEs SECUNDÁRIOS (${d.cnaes_secundarios.length})</div>`;
+    html += d.cnaes_secundarios.slice(0, 12).map(c => `
+      <div class="info-item" style="margin-bottom:6px">
+        <div class="info-value mono" style="font-size:12px">${esc(c.codigo)}</div>
+        <div class="info-value" style="font-size:13px;margin-top:2px">${c.descricao ? esc(c.descricao) : '<span class="empty">sem descrição</span>'}</div>
+      </div>`).join('');
+    if(d.cnaes_secundarios.length > 12){
+      html += `<div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:6px">+${d.cnaes_secundarios.length - 12} CNAEs adicionais</div>`;
+    }
+    html += '</div>';
+  }
+  html += '</div>';
+
+  // ===== ENDEREÇO =====
+  html += `<div class="card">
+    <div class="card-title"><span class="ico">📍</span> Endereço</div>
+    <div class="info-grid">
+      <div class="info-item" style="grid-column:1/-1">
+        <div class="info-label">Logradouro</div>
+        <div class="info-value">${endStr ? esc(endStr) : '<span class="empty">Não informado</span>'}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Bairro / Cidade</div>
+        <div class="info-value">${localStr ? esc(localStr) : '—'}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">CEP</div>
+        <div class="info-value mono">${esc(d.endereco?.cep || '—')}</div>
+      </div>
+    </div>
+  </div>`;
+
+  // ===== CONTATO =====
+  if(d.email || (d.telefones||[]).length){
+    html += `<div class="card">
+      <div class="card-title"><span class="ico">📞</span> Contato</div>
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-label">Telefone</div>
+          <div class="info-value">${esc((d.telefones||[]).join(' · ') || '—')}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">E-mail</div>
+          <div class="info-value" style="font-size:13px">${esc(d.email || '—')}</div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // ===== QSA =====
+  if((d.socios||[]).length > 0){
+    html += `<div class="card">
+      <div class="card-title"><span class="ico">👥</span> Quadro societário (${d.socios.length})</div>`;
+    d.socios.forEach(s => {
+      const partes = [];
+      if(s.qualificacao) partes.push(esc(s.qualificacao));
+      if(s.data_entrada) partes.push('desde ' + fmtDate(s.data_entrada));
+      if(s.cpf_cnpj) partes.push(`<span class="mono">${esc(s.cpf_cnpj)}</span>`);
+      html += `<div class="socio-item">
+        <div class="socio-nome">${esc(s.nome)}</div>
+        <div class="socio-meta">${partes.map(p => `<span>${p}</span>`).join('')}</div>
+      </div>`;
+    });
+    html += '</div>';
+  } else {
+    html += `<div class="card">
+      <div class="card-title"><span class="ico">👥</span> Quadro societário</div>
+      <div class="empty" style="padding:20px">Nenhuma fonte retornou sócios.<br><small style="opacity:0.7">Pode ser MEI, empresa individual ou autarquia.</small></div>
+    </div>`;
+  }
+
+  // ===== ALERTAS =====
+  if(a.flags.length > 0){
+    html += `<div class="card">
+      <div class="card-title"><span class="ico">⚠️</span> Pontos de atenção</div>`;
+    a.flags.forEach(f => {
+      html += `<div class="info-item crit" style="margin-bottom:8px">
+        <div class="info-value" style="font-weight:700">${esc(f.titulo)}</div>
+        <div class="info-value" style="font-size:13px;color:rgba(255,255,255,0.75);margin-top:4px">${esc(f.desc)}</div>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  // ===== HUB DE PESQUISAS =====
+  html += renderHub(d);
+
+  // ===== AÇÕES =====
+  html += `<div class="card">
+    <div class="card-title"><span class="ico">📥</span> Exportar dossiê</div>
+    <div class="actions">
+      <button onclick="gerarPDF()">📄 Baixar PDF</button>
+      <button class="secondary" onclick="novaConsulta()">↻ Nova consulta</button>
+    </div>
+  </div>`;
+
+  $('results').innerHTML = html;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function renderHub(d){
+  const cnpj = d.cnpj;
+  const razao = encodeURIComponent(d.razao_social || '');
+  const uf = (d.endereco?.uf || '').toUpperCase();
+  const cidade = encodeURIComponent(d.endereco?.municipio || '');
+
+  const tjUrls = {
+    'AC':'https://esaj.tjac.jus.br/cpopg/open.do','AL':'https://www2.tjal.jus.br/cpopg/open.do',
+    'AM':'https://consultasaj.tjam.jus.br/cpopg/open.do','BA':'https://esaj.tjba.jus.br/cpopg/open.do',
+    'CE':'https://esaj.tjce.jus.br/cpopg/open.do','DF':'https://pje.tjdft.jus.br/consultapublica/',
+    'ES':'https://sistemas.tjes.jus.br/consultaprocessual/','GO':'https://projudi.tjgo.jus.br/',
+    'MA':'https://jurisconsult.tjma.jus.br/','MG':'https://www4.tjmg.jus.br/juridico/sf/proc_pesquisa.jsp',
+    'MS':'https://esaj.tjms.jus.br/cpopg/open.do','MT':'https://pje.tjmt.jus.br/pje/ConsultaPublica/listView.seam',
+    'PA':'https://consultas.tjpa.jus.br/consultaprocessoportal/','PB':'https://app.tjpb.jus.br/consultaprocessual2/',
+    'PE':'https://srv01.tjpe.jus.br/consultaprocessualunificada/','PR':'https://www.tjpr.jus.br/projudi',
+    'RJ':'http://www4.tjrj.jus.br/consultaProcessoWebV2/consultaProc.do','RN':'https://www.tjrn.jus.br/',
+    'RO':'https://pjepg.tjro.jus.br/consulta/ConsultaPublica/listView.seam','RS':'https://www.tjrs.jus.br/',
+    'SC':'https://esaj.tjsc.jus.br/cpopg/open.do','SE':'https://www.tjse.jus.br/portal/consultas/processo-vara',
+    'SP':'https://esaj.tjsp.jus.br/cpopg/open.do','TO':'https://eproc1.tjto.jus.br/eprocV2_prod_1grau/'
+  };
+  const tjLink = tjUrls[uf] || 'https://www.cnj.jus.br/sistemas/datajud/';
+
+  const grupos = [
+    { ico:'🏛️', titulo:'Receita Federal', links:[
+      ['Cartão CNPJ', `https://solucoes.receita.fazenda.gov.br/Servicos/cnpjreva/cnpjreva_solicitacao.asp?cnpj=${cnpj}`],
+      ['CND Federal', `https://solucoes.receita.fazenda.gov.br/Servicos/certidaointernet/PJ/Emitir`],
+      ['Simples Nacional', `https://www8.receita.fazenda.gov.br/SimplesNacional/Aplicacoes/ATSPO/ConsultaOptantes/ConsultaOptantes.app/ConsultarOpcao.aspx`],
+      ['PGFN Regularize', `https://www.regularize.pgfn.gov.br/`]
+    ]},
+    { ico:'⚖️', titulo:'Justiça', links:[
+      ['JusBrasil', `https://www.jusbrasil.com.br/consulta-processual/busca?q=${cnpj}`],
+      ['Escavador', `https://www.escavador.com/sobre/buscar?q=${razao}`],
+      [`TJ ${uf||'do Estado'}`, tjLink],
+      ['CNJ DataJud', `https://www.cnj.jus.br/sistemas/datajud/`]
+    ]},
+    { ico:'💼', titulo:'Trabalhista', links:[
+      ['CNDT', `https://cndt-certidao.tst.jus.br/inicio.faces`],
+      ['TST', `https://consultaprocessual.tst.jus.br/consultaProcessual/`]
+    ]},
+    { ico:'📋', titulo:'Protestos', links:[
+      ['CENPROT', `https://www.cenprotnacional.org.br/`],
+      ['Serasa', `https://www.serasaexperian.com.br/`],
+      ['Boa Vista', `https://www.boavistaservicos.com.br/`]
+    ]},
+    { ico:'🛡️', titulo:'Sanções', links:[
+      ['CEIS', `https://portaldatransparencia.gov.br/sancoes/ceis?cnpjSancionado=${cnpj}`],
+      ['CNEP', `https://portaldatransparencia.gov.br/sancoes/cnep?cnpjSancionado=${cnpj}`],
+      ['CEPIM', `https://portaldatransparencia.gov.br/sancoes/cepim?cnpjEntidade=${cnpj}`],
+      ['OFAC (EUA)', `https://sanctionssearch.ofac.treas.gov/`]
+    ]},
+    { ico:'🌐', titulo:'Reputação', links:[
+      ['Google', `https://www.google.com/search?q=${razao}`],
+      ['Google Notícias', `https://news.google.com/search?q=${razao}`],
+      ['Reclame Aqui', `https://www.reclameaqui.com.br/busca/?q=${razao}`],
+      ['LinkedIn', `https://www.linkedin.com/search/results/companies/?keywords=${razao}`]
+    ]}
+  ];
+
+  let html = `<div class="card">
+    <div class="card-title"><span class="ico">🔗</span> Consultas complementares</div>
+    <p style="font-size:13px;color:rgba(255,255,255,0.65);margin-bottom:14px">Toque para abrir no portal oficial · dados já pré-formatados</p>
+    <div class="hub-grid">`;
+
+  grupos.forEach(g => {
+    html += `<div class="hub-group">
+      <div class="hub-group-title">${g.ico} ${g.titulo}</div>
+      <div class="hub-links">`;
+    g.links.forEach(l => {
+      html += `<a class="hub-link" href="${esc(l[1])}" target="_blank" rel="noopener">
+        <span>${esc(l[0])}</span><span class="hub-link-arrow">↗</span>
+      </a>`;
+    });
+    html += `</div></div>`;
+  });
+
+  html += `</div></div>`;
+  return html;
+}
+
+function novaConsulta(){
+  $('cnpjInput').value = '';
+  $('cnpjInput').focus();
+  $('results').innerHTML = '';
+  $('empty').style.display = 'block';
+  state.ultimoDossie = null;
+  hideStatus();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ============================================================
+   PDF - jsPDF puro (funciona em mobile)
+============================================================ */
+
+async function gerarPDF(){
+  if(!state.ultimoDossie){
+    showStatus('error', '<strong>Faça uma consulta primeiro.</strong>');
+    return;
+  }
+
+  if(typeof window.jspdf === 'undefined'){
+    showStatus('error', '<strong>Biblioteca PDF não carregou.</strong> Verifique sua conexão e recarregue a página.');
+    return;
+  }
+
+  showStatus('loading', 'Gerando PDF…');
+
+  try {
+    const d = state.ultimoDossie.data;
+    const a = analisarRisco(d);
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit:'mm', format:'a4', orientation:'portrait', compress:true });
+
+    const C = {
+      navy: [0, 40, 85],
+      blue: [0, 62, 126],
+      gold: [252, 180, 36],
+      red:  [239, 68, 68],
+      green:[16, 185, 129],
+      gray: [107, 114, 128],
+      bgLight: [245, 249, 252],
+      bgGold:  [255, 248, 230],
+      bgRed:   [254, 242, 242],
+      white: [255, 255, 255]
+    };
+
+    // ============ PÁGINA 1: CAPA ============
+    doc.setFillColor(...C.navy);
+    doc.rect(0, 0, 210, 297, 'F');
+    doc.setFillColor(0, 50, 105);
+    doc.rect(0, 130, 210, 167, 'F');
+    doc.setFillColor(...C.blue);
+    doc.rect(0, 260, 210, 37, 'F');
+
+    // Logo
+    doc.setFillColor(...C.gold);
+    doc.roundedRect(20, 22, 18, 18, 3, 3, 'F');
+    doc.setTextColor(...C.navy);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(22);
+    doc.text('D', 29, 35, { align:'center' });
+
+    // Brand
+    doc.setTextColor(...C.white);
+    doc.setFontSize(13);
+    doc.setFont('helvetica','bold');
+    doc.text('DOSSIÊ CNPJ', 44, 30);
+    doc.setFontSize(8);
+    doc.setFont('helvetica','normal');
+    doc.setTextColor(165, 197, 242);
+    doc.text('CONSULTA EMPRESARIAL', 44, 35);
+
+    // Barra dourada
+    doc.setFillColor(...C.gold);
+    doc.roundedRect(20, 58, 22, 1.5, 0.5, 0.5, 'F');
+
+    // Título
+    doc.setTextColor(...C.white);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(32);
+    doc.text('Dossiê de', 20, 78);
+    doc.text('Consulta Cadastral', 20, 92);
+
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(11);
+    doc.setTextColor(165, 197, 242);
+    doc.text('Pessoa Jurídica · Dados públicos da Receita Federal', 20, 102);
+
+    // CNPJ
+    doc.setTextColor(...C.gold);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(9);
+    doc.text('CNPJ CONSULTADO', 20, 125);
+    doc.setFont('courier','bold');
+    doc.setFontSize(18);
+    doc.text(maskCNPJ(d.cnpj), 20, 138);
+
+    // Razão social
+    doc.setTextColor(...C.white);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(16);
+    const razaoLines = doc.splitTextToSize(d.razao_social || '—', 170);
+    doc.text(razaoLines.slice(0, 2), 20, 150);
+
+    if(d.nome_fantasia){
+      doc.setTextColor(165, 197, 242);
+      doc.setFont('helvetica','normal');
+      doc.setFontSize(12);
+      const fantLines = doc.splitTextToSize(d.nome_fantasia, 170);
+      doc.text(fantLines.slice(0, 1), 20, 165);
+    }
+
+    // Risk card
+    const riskColors = { low:C.green, mid:C.gold, high:C.red };
+    const riskColor = riskColors[a.cor];
+    doc.setFillColor(0, 78, 145);
+    doc.roundedRect(20, 180, 170, 30, 3, 3, 'F');
+    doc.setFillColor(...riskColor);
+    doc.rect(20, 180, 2.5, 30, 'F');
+
+    doc.setFillColor(...C.white);
+    doc.roundedRect(28, 186, 28, 18, 2, 2, 'F');
+    doc.setTextColor(...riskColor);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(14);
+    doc.text(a.nivel, 42, 197, { align:'center' });
+
+    doc.setTextColor(...C.white);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(12);
+    doc.text('Avaliação de Risco Cadastral', 62, 192);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(10);
+    doc.setTextColor(165, 197, 242);
+    const msgs = { low:'Cadastro regular sem alertas críticos', mid:'Verificar pontos de atenção', high:'Análise crítica recomendada' };
+    doc.text(msgs[a.cor], 62, 200);
+
+    // Metadados
+    doc.setDrawColor(140, 170, 220);
+    doc.setLineWidth(0.3);
+    doc.line(20, 228, 190, 228);
+
+    const meta = [
+      ['SITUAÇÃO', d.situacao || '—'],
+      ['TEMPO ATIVO', a.anos !== null ? a.anos.toFixed(1) + ' anos' : '—'],
+      ['DATA ABERTURA', fmtDate(d.data_inicio_atividade) || '—'],
+      ['CAPITAL SOCIAL', fmtMoney(d.capital_social) || '—'],
+      ['DATA DA CONSULTA', fmtDateTime(new Date())],
+      ['FONTE PRINCIPAL', state.ultimoDossie.principal_provider]
+    ];
+
+    meta.forEach((m, i) => {
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      const x = 20 + col * 88;
+      const y = 240 + row * 14;
+      doc.setTextColor(...C.gold);
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(7);
+      doc.text(m[0], x, y);
+      doc.setTextColor(...C.white);
+      doc.setFont('helvetica','normal');
+      doc.setFontSize(10);
+      const valLines = doc.splitTextToSize(String(m[1]), 80);
+      doc.text(valLines.slice(0, 1), x, y + 5);
+    });
+
+    // ============ PÁGINA 2: DADOS ============
+    doc.addPage();
+    pdfHeader(doc, C, d);
+    let y = 38;
+
+    y = pdfSection(doc, C, 'Dados Cadastrais', y);
+
+    const dados = [
+      ['Razão Social', d.razao_social, true],
+      ['Nome Fantasia', d.nome_fantasia],
+      ['CNPJ', maskCNPJ(d.cnpj), false, 'mono'],
+      ['Situação Cadastral', d.situacao],
+      ['Data da Situação', fmtDate(d.data_situacao)],
+      ['Motivo da Situação', d.motivo_situacao],
+      ['Data de Abertura', fmtDate(d.data_inicio_atividade)],
+      ['Tempo de Atividade', a.anos !== null ? a.anos.toFixed(1) + ' anos' : null],
+      ['Natureza Jurídica', d.natureza_juridica],
+      ['Porte', d.porte],
+      ['Matriz/Filial', d.matriz_filial],
+      ['Capital Social', fmtMoney(d.capital_social)],
+      ['Optante Simples', d.opcao_simples ? 'SIM' : 'NÃO'],
+      ['Optante MEI', d.opcao_mei ? 'SIM' : 'NÃO']
+    ];
+
+    for(let i = 0; i < dados.length; i += 2){
+      y = pdfKV(doc, C, 15, y, 88, dados[i][0], dados[i][1], dados[i][3]);
+      if(dados[i+1]){
+        pdfKV(doc, C, 107, y - 13, 88, dados[i+1][0], dados[i+1][1], dados[i+1][3]);
+      }
+    }
+
+    // CNAE
+    y = pdfSection(doc, C, 'Atividade Econômica', y + 3);
+    const cnaePStr = d.cnae_principal?.codigo
+      ? `${d.cnae_principal.codigo}${d.cnae_principal.descricao ? ' — ' + d.cnae_principal.descricao : ''}`
+      : null;
+    y = pdfKV(doc, C, 15, y, 180, 'CNAE Principal', cnaePStr);
+
+    if((d.cnaes_secundarios||[]).length > 0){
+      doc.setTextColor(...C.navy);
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(9);
+      doc.text(`CNAES SECUNDÁRIOS (${d.cnaes_secundarios.length})`, 15, y + 4);
+      y += 6;
+      doc.autoTable({
+        startY: y,
+        head: [['Código', 'Descrição']],
+        body: d.cnaes_secundarios.slice(0, 15).map(c => [
+          c.codigo || '',
+          c.descricao || 'sem descrição'
+        ]),
+        theme: 'grid',
+        headStyles: { fillColor:C.blue, textColor:[255,255,255], fontSize:8, fontStyle:'bold' },
+        bodyStyles: { fontSize:8, textColor:[51,51,51] },
+        alternateRowStyles: { fillColor:[245,249,252] },
+        columnStyles: { 0: { cellWidth:28, font:'courier' } },
+        margin: { left:15, right:15 }
+      });
+      y = doc.lastAutoTable.finalY + 3;
+    }
+
+    // Endereço
+    y = pdfSection(doc, C, 'Endereço', y + 3);
+    const log = [d.endereco?.logradouro, d.endereco?.numero, d.endereco?.complemento].filter(Boolean).join(', ');
+    y = pdfKV(doc, C, 15, y, 180, 'Logradouro', log);
+    y = pdfKV(doc, C, 15, y, 88, 'Bairro', d.endereco?.bairro);
+    pdfKV(doc, C, 107, y - 13, 88, 'CEP', d.endereco?.cep, 'mono');
+    y = pdfKV(doc, C, 15, y, 88, 'Município', d.endereco?.municipio);
+    pdfKV(doc, C, 107, y - 13, 88, 'UF', d.endereco?.uf);
+
+    // Contato
+    if(d.email || (d.telefones||[]).length){
+      y = pdfSection(doc, C, 'Contato', y + 3);
+      y = pdfKV(doc, C, 15, y, 88, 'Telefone(s)', (d.telefones||[]).join(' · '));
+      pdfKV(doc, C, 107, y - 13, 88, 'E-mail', d.email);
+    }
+
+    pdfFooter(doc, C, 1, 3);
+
+    // ============ PÁGINA 3: QSA + LINKS ============
+    doc.addPage();
+    pdfHeader(doc, C, d);
+    y = 38;
+
+    y = pdfSection(doc, C, 'Quadro Societário', y);
+
+    if((d.socios||[]).length > 0){
+      doc.autoTable({
+        startY: y,
+        head: [['Nome', 'CPF/CNPJ', 'Qualificação', 'Entrada']],
+        body: d.socios.map(s => [
+          s.nome || '—',
+          s.cpf_cnpj || '—',
+          s.qualificacao || '—',
+          fmtDate(s.data_entrada) || '—'
+        ]),
+        theme: 'grid',
+        headStyles: { fillColor:C.blue, textColor:[255,255,255], fontSize:8, fontStyle:'bold' },
+        bodyStyles: { fontSize:8, textColor:[51,51,51] },
+        alternateRowStyles: { fillColor:[245,249,252] },
+        columnStyles: {
+          0: { fontStyle:'bold', cellWidth:60 },
+          1: { font:'courier', cellWidth:35 },
+          3: { cellWidth:22 }
+        },
+        margin: { left:15, right:15 }
+      });
+      y = doc.lastAutoTable.finalY + 3;
+    } else {
+      doc.setFillColor(...C.bgGold);
+      doc.setDrawColor(...C.gold);
+      doc.roundedRect(15, y, 180, 14, 2, 2, 'FD');
+      doc.setTextColor(120, 80, 0);
+      doc.setFont('helvetica','italic');
+      doc.setFontSize(9);
+      doc.text('Nenhuma fonte retornou sócios. Pode ser MEI, empresa individual ou autarquia.', 18, y + 8);
+      y += 18;
+    }
+
+    // Alertas
+    if(a.flags.length > 0){
+      y = pdfSection(doc, C, 'Pontos de Atenção', y + 3);
+      a.flags.forEach(f => {
+        const txt = f.titulo + ' · ' + f.desc;
+        const lines = doc.splitTextToSize(txt, 168);
+        const h = 6 + lines.length * 4;
+        doc.setFillColor(...C.bgRed);
+        doc.setDrawColor(...C.red);
+        doc.roundedRect(15, y, 180, h, 2, 2, 'FD');
+        doc.setTextColor(120, 30, 30);
+        doc.setFont('helvetica','normal');
+        doc.setFontSize(9);
+        doc.text(lines, 19, y + 5);
+        y += h + 3;
+      });
+    }
+
+    // Links
+    y = pdfSection(doc, C, 'Consultas Complementares', y + 3);
+    const cnpjEnc = d.cnpj;
+    const razaoEnc = encodeURIComponent(d.razao_social || '');
+    const links = [
+      ['Cartão CNPJ - Receita Federal', `https://solucoes.receita.fazenda.gov.br/Servicos/cnpjreva/cnpjreva_solicitacao.asp?cnpj=${cnpjEnc}`],
+      ['CND Federal (Receita + PGFN)', `https://solucoes.receita.fazenda.gov.br/Servicos/certidaointernet/PJ/Emitir`],
+      ['CNDT - Certidão Trabalhista', `https://cndt-certidao.tst.jus.br/inicio.faces`],
+      ['JusBrasil', `https://www.jusbrasil.com.br/consulta-processual/busca?q=${cnpjEnc}`],
+      ['Escavador', `https://www.escavador.com/sobre/buscar?q=${razaoEnc}`],
+      ['CEIS - Empresas Inidôneas', `https://portaldatransparencia.gov.br/sancoes/ceis?cnpjSancionado=${cnpjEnc}`],
+      ['CEPIM - Entidades Impedidas', `https://portaldatransparencia.gov.br/sancoes/cepim?cnpjEntidade=${cnpjEnc}`],
+      ['CENPROT - Protestos', `https://www.cenprotnacional.org.br/`],
+      ['Google Notícias', `https://news.google.com/search?q=${razaoEnc}`],
+      ['Reclame Aqui', `https://www.reclameaqui.com.br/busca/?q=${razaoEnc}`]
+    ];
+
+    links.forEach(l => {
+      if(y > 270){ doc.addPage(); pdfHeader(doc, C, d); y = 38; }
+      doc.setFillColor(...C.bgLight);
+      doc.roundedRect(15, y, 180, 9, 1, 1, 'F');
+      doc.setFillColor(...C.gold);
+      doc.rect(15, y, 1.2, 9, 'F');
+      doc.setTextColor(...C.navy);
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(8.5);
+      doc.text('• ' + l[0], 19, y + 4);
+      doc.setTextColor(0, 102, 179);
+      doc.setFont('helvetica','normal');
+      doc.setFontSize(7);
+      const urlLines = doc.splitTextToSize(l[1], 175);
+      doc.textWithLink(urlLines[0], 20, y + 7.5, { url: l[1] });
+      y += 11;
+    });
+
+    pdfFooter(doc, C, 3, 3);
+
+    // Salvar
+    const filename = `Dossie_CNPJ_${d.cnpj}_${Date.now()}.pdf`;
+    doc.save(filename);
+
+    showStatus('success', '<strong>PDF gerado!</strong> Verifique a pasta Downloads do seu dispositivo.');
+    setTimeout(hideStatus, 5000);
+
+  } catch(e){
+    console.error('[PDF] Erro:', e);
+    showStatus('error', '<strong>Erro ao gerar PDF.</strong><br>' + esc(e.message || 'Tente novamente.'));
+  }
+}
+
+function pdfHeader(doc, C, d){
+  doc.setFillColor(...C.blue);
+  doc.roundedRect(15, 12, 11, 11, 2, 2, 'F');
+  doc.setTextColor(...C.white);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(12);
+  doc.text('D', 20.5, 19.5, { align:'center' });
+
+  doc.setTextColor(...C.navy);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(10);
+  doc.text('Dossiê CNPJ', 30, 17);
+  doc.setTextColor(...C.gray);
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(7);
+  doc.text('Consulta empresarial', 30, 21);
+
+  doc.setFillColor(245, 249, 252);
+  doc.setDrawColor(200, 215, 230);
+  doc.setLineWidth(0.2);
+  doc.roundedRect(130, 12, 65, 11, 2, 2, 'FD');
+  doc.setTextColor(...C.navy);
+  doc.setFontSize(7);
+  doc.text('CNPJ', 134, 17);
+  doc.setFont('courier','bold');
+  doc.setFontSize(8);
+  doc.text(maskCNPJ(d.cnpj), 134, 21);
+
+  doc.setFillColor(...C.blue);
+  doc.rect(15, 27, 180, 0.8, 'F');
+}
+
+function pdfSection(doc, C, title, y){
+  doc.setFillColor(...C.blue);
+  doc.roundedRect(15, y, 180, 8, 1.5, 1.5, 'F');
+  doc.setFillColor(...C.gold);
+  doc.rect(17, y + 2, 1.3, 4, 'F');
+  doc.setTextColor(...C.white);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(9);
+  doc.text(title.toUpperCase(), 21, y + 5.5);
+  return y + 11;
+}
+
+function pdfKV(doc, C, x, y, w, label, value, fmt){
+  const empty = !value || value === '—' || value === '';
+  doc.setFillColor(245, 249, 252);
+  doc.roundedRect(x, y, w, 11, 1, 1, 'F');
+  doc.setFillColor(...C.blue);
+  doc.rect(x, y, 0.8, 11, 'F');
+
+  doc.setTextColor(...C.blue);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(6.5);
+  doc.text(label.toUpperCase(), x + 2.5, y + 3.5);
+
+  doc.setTextColor(empty ? 150 : 51, empty ? 150 : 51, empty ? 150 : 51);
+  doc.setFont(fmt === 'mono' ? 'courier' : 'helvetica', 'normal');
+  doc.setFontSize(8.5);
+  const valStr = empty ? 'Não informado' : String(value);
+  const lines = doc.splitTextToSize(valStr, w - 4);
+  doc.text(lines.slice(0, 1), x + 2.5, y + 8);
+
+  return y + 13;
+}
+
+function pdfFooter(doc, C, page, total){
+  doc.setDrawColor(200, 215, 230);
+  doc.setLineWidth(0.2);
+  doc.line(15, 285, 195, 285);
+
+  doc.setTextColor(...C.navy);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(7);
+  doc.text('DOSSIÊ CNPJ', 15, 290);
+
+  doc.setTextColor(...C.gray);
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(7);
+  doc.text('· Documento gerado em ' + fmtDateTime(new Date()) + ' · Fonte: ' + state.ultimoDossie.principal_provider, 30, 290);
+
+  doc.setFillColor(...C.blue);
+  doc.roundedRect(175, 287, 20, 5.5, 2, 2, 'F');
+  doc.setTextColor(...C.white);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(7);
+  doc.text('Pág. ' + page + '/' + total, 185, 291, { align:'center' });
+}
+
+/* ============================================================
+   INIT
+============================================================ */
+$('cnpjInput').addEventListener('input', e => {
+  e.target.value = maskCNPJ(e.target.value);
+});
+
+$('cnpjInput').addEventListener('keydown', e => {
+  if(e.key === 'Enter') consultar();
+});
+
+$('cnpjInput').focus();
+</script>
+</body>
+</html>
